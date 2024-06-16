@@ -27,7 +27,7 @@ func main() {
 	}
 
 	m := novel.GetAllChaptersContent()
-	for i := range end - start - 1 {
+	for i := range end - (start - 1) {
 		fmt.Println(m[i])
 	}
 }
