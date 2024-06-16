@@ -47,9 +47,9 @@ func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
 	// immitate infinte scroll
 	if err := chromedp.Run(ctx,
 		chromedp.Navigate(n.HomePageURL),
-		chromedp.Sleep(1*time.Second),
+		chromedp.Sleep(500*time.Millisecond),
 		chromedp.KeyEvent(kb.End),
-		chromedp.Sleep(1*time.Second),
+		chromedp.Sleep(500*time.Millisecond),
 		chromedp.OuterHTML("html", &htmlContent),
 	); err != nil {
 		return fmt.Errorf("error in fetching chapter urls from the home page, error: %v", err)
@@ -104,26 +104,25 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 			}
 
 			title := doc.Find(".chr-title")
+			fmt.Println(title.Text())
+			fmt.Println(strings.TrimSpace(title.Text()))
 			chapterChannel <- map[int]Chapter{i: {Title: strings.TrimSpace(title.Text()), Content: ""}}
 
 			return nil
 		})
 	}
 
-	go func() {
-		for c := range chapterChannel {
-			for k, v := range c {
-				n.Content[k] = v
-			}
-		}
-	}()
-
 	if err := g.Wait(); err != nil {
-		close(chapterChannel)
 		return err
 	}
-
 	close(chapterChannel)
+
+	for c := range chapterChannel {
+		for k, v := range c {
+			n.Content[k] = v
+		}
+	}
+
 	return nil
 }
 
