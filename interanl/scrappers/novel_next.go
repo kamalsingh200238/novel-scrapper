@@ -104,8 +104,6 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 			}
 
 			title := doc.Find(".chr-title")
-			fmt.Println(title.Text())
-			fmt.Println(strings.TrimSpace(title.Text()))
 			chapterChannel <- map[int]Chapter{i: {Title: strings.TrimSpace(title.Text()), Content: ""}}
 
 			return nil
