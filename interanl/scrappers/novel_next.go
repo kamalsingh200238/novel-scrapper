@@ -19,7 +19,7 @@ type NovelNextScrapper struct {
 	EndingChapterNumber   int
 	HomePageURL           string
 	ChapterURls           []string
-	Content               map[int]Chapter
+	Content               []Chapter
 }
 
 func CreateNovelNextScrapper(url string, start int, end int) Scrapper {
@@ -27,7 +27,7 @@ func CreateNovelNextScrapper(url string, start int, end int) Scrapper {
 		HomePageURL:           url,
 		StartingChapterNumber: start,
 		EndingChapterNumber:   end,
-		Content:               make(map[int]Chapter),
+		Content:               make([]Chapter, end-(start-1)),
 	}
 }
 
@@ -80,7 +80,7 @@ func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
 
 func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 	chapterChannel := make(chan map[int]Chapter, n.EndingChapterNumber-(n.StartingChapterNumber-1))
-	sem := semaphore.NewWeighted(20)
+	sem := semaphore.NewWeighted(10)
 	g := new(errgroup.Group)
 
 	fmt.Println("fetching chapter content")
@@ -103,11 +103,32 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 				return fmt.Errorf("error in parsing the content of page, url: %v, counter: %v, error: %v", url, i, err)
 			}
 
-			title := doc.Find(".chr-title")
+			title := strings.TrimSpace(doc.Find(".chr-title").First().Text())
+
+			var content string
+
+			var processNode func(*goquery.Selection)
+			processNode = func(s *goquery.Selection) {
+				if s.Children().Length() == 0 {
+					tagName := goquery.NodeName(s)
+					if tagName != "script" {
+						content += fmt.Sprintf("%v\n", strings.TrimSpace(s.Text()))
+					}
+				} else {
+					s.Children().Each(func(i int, selection *goquery.Selection) {
+						processNode(selection)
+					})
+				}
+			}
+
+			doc.Find("#chr-content").Children().Each(func(i int, s *goquery.Selection) {
+				processNode(s)
+			})
+
 			chapterChannel <- map[int]Chapter{
 				i: {
-					Title:   strings.TrimSpace(title.Text()),
-					Content: "",
+					Title:   title,
+					Content: content,
 				},
 			}
 
@@ -129,6 +150,6 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 	return nil
 }
 
-func (n *NovelNextScrapper) GetAllChaptersContent() map[int]Chapter {
+func (n *NovelNextScrapper) GetAllChaptersContent() []Chapter {
 	return n.Content
 }
