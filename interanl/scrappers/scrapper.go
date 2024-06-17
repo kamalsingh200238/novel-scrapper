@@ -3,7 +3,7 @@ package scrappers
 type Scrapper interface {
 	FetchAllLinksOfChapters() error
 	FetchAllChaptersContent() error
-	GetAllChaptersContent() map[int]Chapter
+	GetAllChaptersContent() []Chapter
 }
 
 type Chapter struct {
