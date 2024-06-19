@@ -79,14 +79,12 @@ func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
 }
 
 func (n *NovelNextScrapper) FetchAllChaptersContent() error {
-	chapterChannel := make(chan map[int]Chapter, n.EndingChapterNumber-(n.StartingChapterNumber-1))
 	sem := semaphore.NewWeighted(10)
 	g := new(errgroup.Group)
 
 	fmt.Println("fetching chapter content")
 	for i, url := range n.ChapterURls[n.StartingChapterNumber-1 : n.EndingChapterNumber] {
-		i := i
-		url := url
+		i, url := i, url
 		g.Go(func() error {
 			if err := sem.Acquire(context.Background(), 1); err != nil {
 				return fmt.Errorf("error in acquiring semaphore, url: %v, counter: %v, error: %v", url, i, err)
@@ -125,12 +123,7 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 				processNode(s)
 			})
 
-			chapterChannel <- map[int]Chapter{
-				i: {
-					Title:   title,
-					Content: content,
-				},
-			}
+			n.Content[i] = Chapter{Title: title, Content: content}
 
 			return nil
 		})
@@ -138,13 +131,6 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 
 	if err := g.Wait(); err != nil {
 		return err
-	}
-	close(chapterChannel)
-
-	for c := range chapterChannel {
-		for k, v := range c {
-			n.Content[k] = v
-		}
 	}
 
 	return nil
