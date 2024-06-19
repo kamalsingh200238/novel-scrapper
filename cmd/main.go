@@ -29,8 +29,9 @@ func main() {
 	}
 
 	m := novel.GetAllChaptersContent()
-	fileName := fmt.Sprintf("Dragon Marked War God (%v - %v)", start, end)
-	e := epub.NewEpub(fileName)
+	fileName := fmt.Sprintf("dragon_marked_war_god_%v_%v.epub", start, end)
+	novelHeader := fmt.Sprintf("dragon_marked_war_god_%v_%v", start, end)
+	e := epub.NewEpub(novelHeader)
 
 	fmt.Println("Writing in file")
 	for _, v := range m {
