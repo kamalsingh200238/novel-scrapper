@@ -1,15 +1,14 @@
-package scrappers
+package novelnext
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"novel-scraper-bot/interanl/scrapper"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/chromedp/chromedp"
-	"github.com/chromedp/chromedp/kb"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
@@ -19,44 +18,23 @@ type NovelNextScrapper struct {
 	EndingChapterNumber   int
 	HomePageURL           string
 	ChapterURls           []string
-	Content               []Chapter
+	Content               []scrapper.Chapter
 }
 
-func CreateNovelNextScrapper(url string, start int, end int) Scrapper {
+func CreateNovelNextScrapper(url string, start int, end int) scrapper.Scrapper {
 	return &NovelNextScrapper{
 		HomePageURL:           url,
 		StartingChapterNumber: start,
 		EndingChapterNumber:   end,
-		Content:               make([]Chapter, end-(start-1)),
+		Content:               make([]scrapper.Chapter, end-(start-1)),
 	}
 }
 
 func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
-	// get the html content of the home page
-	// reason for using chrome dp: novel next uses javascript to load all the urls for the page
-	fmt.Println("fetching home page html content")
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
-	)
-	ctx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-	ctx, cancel = chromedp.NewContext(ctx)
-	defer cancel()
+	slog.Info("fetching home page html content")
+	slog.Info("completed fetching home page")
 
-	var htmlContent string
-	// immitate infinte scroll
-	if err := chromedp.Run(ctx,
-		chromedp.Navigate(n.HomePageURL),
-		chromedp.Sleep(500*time.Millisecond),
-		chromedp.KeyEvent(kb.End),
-		chromedp.Sleep(500*time.Millisecond),
-		chromedp.OuterHTML("html", &htmlContent),
-	); err != nil {
-		return fmt.Errorf("error in fetching chapter urls from the home page, error: %v", err)
-	}
-	fmt.Println("completed fetching home page")
-
-	fmt.Println("starting to parse chapter links from the html content")
+  var htmlContent string
 	pageReader := strings.NewReader(htmlContent)
 	doc, err := goquery.NewDocumentFromReader(pageReader)
 	if err != nil {
@@ -73,7 +51,6 @@ func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
 			}
 		})
 	})
-	fmt.Println("finished parsing chapter links from the html content")
 
 	return nil
 }
@@ -82,7 +59,7 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 	sem := semaphore.NewWeighted(10)
 	g := new(errgroup.Group)
 
-	fmt.Println("fetching chapter content")
+	slog.Info("fetching chapters content")
 	for i, url := range n.ChapterURls[n.StartingChapterNumber-1 : n.EndingChapterNumber] {
 		i, url := i, url
 		g.Go(func() error {
@@ -123,7 +100,7 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 				processNode(s)
 			})
 
-			n.Content[i] = Chapter{Title: title, Content: content}
+			n.Content[i] = scrapper.Chapter{Title: title, Content: content}
 
 			return nil
 		})
@@ -136,6 +113,6 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 	return nil
 }
 
-func (n *NovelNextScrapper) GetAllChaptersContent() []Chapter {
+func (n *NovelNextScrapper) GetAllChaptersContent() []scrapper.Chapter {
 	return n.Content
 }

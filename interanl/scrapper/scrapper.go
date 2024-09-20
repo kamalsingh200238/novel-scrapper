@@ -1,4 +1,4 @@
-package scrappers
+package scrapper
 
 type Scrapper interface {
 	FetchAllLinksOfChapters() error
@@ -10,3 +10,4 @@ type Chapter struct {
 	Title   string
 	Content string
 }
+
