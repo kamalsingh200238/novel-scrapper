@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 	"log/slog"
-	"novel-scraper-bot/interanl/novelnext"
+	"novel-scraper-bot/internal/novelnext"
 
 	"github.com/bmaupin/go-epub"
 )
@@ -21,6 +21,7 @@ func MakeEpub(url string, startChapter int, endChapter int, filename string) err
 	}
 
 	m := novel.GetAllChaptersContent()
+	fmt.Println(m)
 
 	fileName := fmt.Sprintf("%s_%d_%d.epub", filename, startChapter, endChapter)
 	novelHeader := fmt.Sprintf("%s_%d_%d", filename, startChapter, endChapter)

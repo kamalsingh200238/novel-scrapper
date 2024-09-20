@@ -1,11 +1,14 @@
 package novelnext
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/http"
-	"novel-scraper-bot/interanl/scrapper"
+	"novel-scraper-bot/internal/scrapper"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -21,6 +24,12 @@ type NovelNextScrapper struct {
 	Content               []scrapper.Chapter
 }
 
+type response struct {
+	Success bool   `json:"success"`
+	Reason  string `json:"reason"`
+	HTML    string `json:"html"`
+}
+
 func CreateNovelNextScrapper(url string, start int, end int) scrapper.Scrapper {
 	return &NovelNextScrapper{
 		HomePageURL:           url,
@@ -32,15 +41,17 @@ func CreateNovelNextScrapper(url string, start int, end int) scrapper.Scrapper {
 
 func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
 	slog.Info("fetching home page html content")
+	html, err := fetchHomepageHTML(n.HomePageURL)
+	if err != nil {
+		return err
+	}
 	slog.Info("completed fetching home page")
 
-  var htmlContent string
-	pageReader := strings.NewReader(htmlContent)
+	pageReader := strings.NewReader(html)
 	doc, err := goquery.NewDocumentFromReader(pageReader)
 	if err != nil {
 		return fmt.Errorf("error in parsing home page html, error: %v", err)
 	}
-
 	ulElements := doc.Find("ul.list-chapter")
 	ulElements.Each(func(i int, ul *goquery.Selection) {
 		ul.Find("a").Each(func(j int, a *goquery.Selection) {
@@ -51,7 +62,6 @@ func (n *NovelNextScrapper) FetchAllLinksOfChapters() error {
 			}
 		})
 	})
-
 	return nil
 }
 
@@ -61,19 +71,21 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 
 	slog.Info("fetching chapters content")
 	for i, url := range n.ChapterURls[n.StartingChapterNumber-1 : n.EndingChapterNumber] {
-		i, url := i, url
 		g.Go(func() error {
 			if err := sem.Acquire(context.Background(), 1); err != nil {
 				return fmt.Errorf("error in acquiring semaphore, url: %v, counter: %v, error: %v", url, i, err)
 			}
 			defer sem.Release(1)
 
-			resp, err := http.Get(url)
+			fmt.Println("fetch url", i, url)
+			html, err := fetchHTML(url)
 			if err != nil {
-				return fmt.Errorf("error in fetching the content, url: %v, counter: %v error: %v", url, i, err)
+				return err
 			}
+			fmt.Println("fetch finished url", i, url)
 
-			doc, err := goquery.NewDocumentFromReader(resp.Body)
+			pageReader := strings.NewReader(html)
+			doc, err := goquery.NewDocumentFromReader(pageReader)
 			if err != nil {
 				return fmt.Errorf("error in parsing the content of page, url: %v, counter: %v, error: %v", url, i, err)
 			}
@@ -115,4 +127,46 @@ func (n *NovelNextScrapper) FetchAllChaptersContent() error {
 
 func (n *NovelNextScrapper) GetAllChaptersContent() []scrapper.Chapter {
 	return n.Content
+}
+
+func fetchHTML(url string) (string, error) {
+	scriptPath := filepath.Join("internal", "novelnext", "scripts", "get-html.py")
+	cmd := exec.Command("python3", scriptPath, "--url", url)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	// run the python script
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	// read the response
+	var resp response
+	if err = json.Unmarshal(out.Bytes(), &resp); err != nil {
+		return "", err
+	}
+	if !resp.Success {
+		return "", fmt.Errorf("error in fetching home page, error=%s", resp.Reason)
+	}
+	return resp.HTML, nil
+}
+
+func fetchHomepageHTML(url string) (string, error) {
+	scriptPath := filepath.Join("internal", "novelnext", "scripts", "get-homepage-html.py")
+	cmd := exec.Command("python3", scriptPath, "--url", url)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	// run the python script
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	// read the response
+	var resp response
+	if err = json.Unmarshal(out.Bytes(), &resp); err != nil {
+		return "", err
+	}
+	if !resp.Success {
+		return "", fmt.Errorf("error in fetching home page, error=%s", resp.Reason)
+	}
+	return resp.HTML, nil
 }
