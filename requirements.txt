@@ -1,2 +1,3 @@
-playwright
-beautifulsoup4
+botasaurus
+chrome_extension_python 
+ebooklib 
