@@ -7,7 +7,7 @@ type Scrapper interface {
 }
 
 type Chapter struct {
+	Number  float64
 	Title   string
 	Content string
 }
-
