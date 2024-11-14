@@ -1,0 +1,11 @@
+[project]
+name = "novel-scrapper"
+version = "0.1.0"
+description = "Scrape web novels and generate epubs"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "botasaurus>=4.0.75",
+    "chrome-extension-python>=1.0.1",
+    "ebooklib>=0.18",
+]
