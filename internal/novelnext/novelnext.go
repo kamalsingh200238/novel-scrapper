@@ -13,7 +13,6 @@ type NovelNext struct {
 	startChapter float64
 	endChapter   float64
 	homepageURL  string
-	fileName     string
 	chapters     []scrapper.Chapter
 }
 
@@ -22,13 +21,12 @@ type ScriptData struct {
 	Error string             `json:"error"`
 }
 
-func Init(url string, start float64, end float64, fileName string) scrapper.Scrapper {
+func Init(url string, start float64, end float64) scrapper.Scrapper {
 	return &NovelNext{
 		homepageURL:  url,
 		startChapter: start,
 		endChapter:   end,
 		chapters:     []scrapper.Chapter{},
-		fileName:     fileName,
 	}
 }
 
