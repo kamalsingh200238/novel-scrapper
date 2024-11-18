@@ -21,7 +21,7 @@ type ScriptData struct {
 	Error string             `json:"error"`
 }
 
-func Init(url string, start float64, end float64) scrapper.Scrapper {
+func Init(url string, start, end float64) scrapper.Scrapper {
 	return &NovelNext{
 		homepageURL:  url,
 		startChapter: start,
@@ -52,7 +52,7 @@ func (n *NovelNext) FetchAllChaptersContent() error {
 	first := strings.Index(output, "{")
 	last := strings.LastIndex(output, "}")
 	if first == -1 || last == -1 {
-		return fmt.Errorf("no json returned")
+		return fmt.Errorf("no json returned from python script")
 	}
 	jsonString := output[first : last+1]
 
